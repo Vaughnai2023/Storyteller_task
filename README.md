@@ -4,7 +4,7 @@
 
 Built by Vaughn Botha | March 2026
 
-> **Live demo:** _Vercel URL to be added after deployment_
+> **Live demo:** https://storyteller-task-kappa.vercel.app/
 
 ---
 
