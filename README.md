@@ -58,17 +58,17 @@ With engineering support, in this order:
 - `3-n8n-flows/story_qa_pipeline.json` (main QA pipeline)
 - `3-n8n-flows/story_qa_results.json` (results retrieval endpoint)
 
-**3. Frontend** — Open `4-frontend/index.html` in your browser. Sample data is pre-loaded — hit Submit to run the pipeline.
+**3. Frontend** — Open `index.html` in your browser. Sample data is pre-loaded — hit Submit to run the pipeline.
 
 The frontend includes the full writeup with pipeline details, architecture diagrams, and design rationale below the QA tool.
 
 ## Repo Structure
 
 ```
+index.html       → Single-file HTML interface with embedded writeup (root for Vercel)
 1-sample-data/   → Example payload (Antarctic Football League — includes intentional CTA mismatch)
 2-database/      → SQL schema with tables + tenant health trigger
 3-n8n-flows/     → n8n workflow exports (main pipeline + results endpoint)
-4-frontend/      → Single-file HTML interface with embedded writeup
 ```
 
 Numbered folders show setup order at a glance.
