@@ -1,0 +1,20 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude Code
+.claude/
+
+# Remotion build artifacts
+.remotion/
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Credentials
+*.pem
+*.key

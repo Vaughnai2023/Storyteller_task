@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storyteller Story QA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    html { scroll-behavior: smooth; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --bg-subtle: #161821;
+      --surface: #ffffff;
+      --surface-hover: #f8f9fb;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --text-on-dark: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --green: #22c55e;
+      --green-bg: #f0fdf4;
+      --green-glow: rgba(34, 197, 94, 0.2);
+      --amber: #f59e0b;
+      --amber-bg: #fffbeb;
+      --amber-glow: rgba(245, 158, 11, 0.2);
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --red-glow: rgba(239, 68, 68, 0.2);
+      --border: #e2e8f0;
+      --border-subtle: #f1f5f9;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --radius-xs: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 32px rgba(0,0,0,0.06);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.1), 0 16px 48px rgba(0,0,0,0.1);
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--text-on-dark);
+      min-height: 100vh;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    /* Dot grid background texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Accent gradient line at top */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--accent);
+      z-index: 100;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 40px 32px 32px;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 36px;
+      animation: fadeInDown 0.5s ease;
+    }
+
+    header h1 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Panels grid */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: var(--shadow);
+      animation: fadeInUp 0.5s ease;
+    }
+
+    .panel-input { animation-delay: 0.1s; }
+    .panel-results { animation-delay: 0.2s; }
+
+    .panel h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 18px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel h2::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .panel-results h2::before {
+      background: var(--accent);
+    }
+
+    .instruction {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .instruction kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      min-height: 380px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      background: #f8fafc;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    /* Error message */
+    .error-message {
+      font-size: 13px;
+      color: var(--red);
+      margin-top: 8px;
+      min-height: 20px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .error-message:empty { display: none; }
+
+    .error-message::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      background: var(--red);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat;
+      flex-shrink: 0;
+    }
+
+    /* Submit button */
+    .btn-submit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px 28px;
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      width: 100%;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .btn-submit .spinner-inline {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Results area */
+    .placeholder-text {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 60px 20px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      line-height: 1.6;
+    }
+
+    .placeholder-text .icon {
+      display: block;
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+
+    /* Result cards */
+    .result-card {
+      background: #fff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.4s ease;
+      transition: border-color 0.3s;
+    }
+
+    .result-card:last-child { margin-bottom: 0; }
+
+    .result-card.status-ok { border-left: 4px solid var(--green); }
+    .result-card.status-review { border-left: 4px solid var(--amber); }
+    .result-card.status-invalid,
+    .result-card.status-invalid_structure,
+    .result-card.status-error { border-left: 4px solid var(--red); }
+    .result-card.status-loading { border-left: 4px solid var(--border); }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .result-story-id {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-radius: 999px;
+      line-height: 1.4;
+    }
+
+    .badge-ok {
+      background: var(--green-bg);
+      color: #15803d;
+      box-shadow: 0 0 8px var(--green-glow);
+    }
+
+    .badge-review {
+      background: var(--amber-bg);
+      color: #b45309;
+      box-shadow: 0 0 8px var(--amber-glow);
+    }
+
+    .badge-invalid,
+    .badge-invalid_structure,
+    .badge-error {
+      background: var(--red-bg);
+      color: #dc2626;
+      box-shadow: 0 0 8px var(--red-glow);
+    }
+
+    .badge-loading {
+      background: var(--surface-hover);
+      color: var(--text-secondary);
+    }
+
+    /* Result meta row */
+    .result-meta {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+    }
+
+    .meta-label {
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    /* Issues list */
+    .issues-section {
+      margin-bottom: 14px;
+    }
+
+    .issues-title {
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .issue-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #fafbfc;
+      border-radius: var(--radius-xs);
+      margin-bottom: 6px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .issue-row:last-child { margin-bottom: 0; }
+
+    .issue-type-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--amber-bg);
+      color: #b45309;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .issue-type-tag.type-error {
+      background: var(--red-bg);
+      color: #dc2626;
+    }
+
+    .issue-page {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .issue-detail {
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    }
+
+    .no-issues {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--green-bg);
+      border-radius: var(--radius-xs);
+      font-size: 13px;
+      color: #15803d;
+      font-weight: 500;
+    }
+
+    .no-issues::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      background: var(--green);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E") center/contain no-repeat;
+      flex-shrink: 0;
+    }
+
+    /* Summary */
+    .result-summary {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      font-style: italic;
+      line-height: 1.5;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .result-timestamp {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    /* Loading state in result card */
+    .loading-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 0;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* Error card in results */
+    .error-card {
+      background: var(--red-bg);
+      border: 1.5px solid #fecaca;
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      color: #991b1b;
+      font-size: 14px;
+      line-height: 1.5;
+      animation: fadeInUp 0.4s ease;
+    }
+
+    .error-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: #dc2626;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 0 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+      animation: fadeInUp 0.5s ease 0.3s both;
+    }
+
+    footer span {
+      opacity: 0.4;
+      margin: 0 8px;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Page navigation */
+    .page-nav {
+      display: flex;
+      gap: 6px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .page-nav a {
+      display: inline-block;
+      padding: 5px 14px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      text-decoration: none;
+      transition: color 0.2s, background 0.2s, border-color 0.2s;
+    }
+
+    .page-nav a:hover {
+      color: #fff;
+      background: rgba(16, 185, 129, 0.12);
+      border-color: var(--accent);
+    }
+
+    /* Writeup sections */
+    .writeup-divider {
+      margin: 56px auto 0;
+      width: 120px;
+      height: 2px;
+      background: var(--accent);
+      opacity: 0.4;
+      border-radius: 2px;
+    }
+
+    .writeup {
+      margin-top: 40px;
+    }
+
+    .writeup-section {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.5s ease both;
+    }
+
+    .writeup-section:nth-child(1) { animation-delay: 0.1s; }
+    .writeup-section:nth-child(2) { animation-delay: 0.15s; }
+    .writeup-section:nth-child(3) { animation-delay: 0.2s; }
+    .writeup-section:nth-child(4) { animation-delay: 0.25s; }
+    .writeup-section:nth-child(5) { animation-delay: 0.3s; }
+
+    .writeup h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 20px;
+      color: #fff;
+      margin-bottom: 16px;
+    }
+
+    .writeup h2 span {
+      color: var(--accent);
+    }
+
+    .writeup-intro {
+      font-size: 15px;
+      color: var(--text-on-dark);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    /* Pipeline diagram */
+    .pipeline-diagram {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 140px;
+      padding: 16px 8px;
+    }
+
+    .step-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .step-label {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 13px;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .step-desc {
+      font-size: 12.5px;
+      color: var(--text-on-dark);
+      line-height: 1.5;
+    }
+
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      padding-top: 22px;
+      color: var(--text-muted);
+      font-size: 18px;
+      opacity: 0.4;
+    }
+
+    .pipeline-arrow::after {
+      content: '\203A';
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    /* Decision grid */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .decision-card {
+      background: rgba(255,255,255,0.03);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      padding: 20px;
+    }
+
+    .decision-card h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .decision-card p {
+      font-size: 14px;
+      color: var(--text-on-dark);
+      line-height: 1.7;
+    }
+
+    /* Architecture */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .arch-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+    }
+
+    .arch-card h3 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 14px;
+      color: #fff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .arch-card h3::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .arch-card p {
+      font-size: 14px;
+      color: var(--text-on-dark);
+      line-height: 1.7;
+    }
+
+    .arch-card code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #6ee7b7;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* Next list */
+    .next-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .next-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-on-dark);
+      line-height: 1.6;
+    }
+
+    .next-list li::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 7px;
+    }
+
+    .next-label {
+      font-family: var(--font-display);
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .next-detail {
+      color: var(--text-on-dark);
+    }
+
+    /* Demo video */
+    .video-container {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+
+    .video-container video {
+      display: block;
+      width: 100%;
+      border-radius: var(--radius-sm);
+    }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      position: fixed;
+      top: 14px;
+      right: 20px;
+      z-index: 200;
+      width: 36px;
+      height: 36px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* Light theme overrides */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-subtle: #f1f5f9;
+      --text-on-dark: #1e293b;
+      --text-muted: #64748b;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    }
+
+    [data-theme="light"] body::before {
+      background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+    }
+
+    [data-theme="light"] body::after {
+      background: var(--accent);
+    }
+
+    [data-theme="light"] header h1 {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] header h1 span {
+      color: var(--accent);
+    }
+
+    [data-theme="light"] header p {
+      color: var(--text-secondary);
+    }
+
+    [data-theme="light"] .page-nav a {
+      color: var(--text-secondary);
+      background: rgba(0,0,0,0.04);
+      border-color: rgba(0,0,0,0.08);
+    }
+
+    [data-theme="light"] .page-nav a:hover {
+      color: var(--accent-hover);
+      background: rgba(16, 185, 129, 0.08);
+      border-color: var(--accent);
+    }
+
+    [data-theme="light"] .theme-toggle {
+      border-color: rgba(0,0,0,0.12);
+      background: rgba(0,0,0,0.04);
+      color: var(--text-secondary);
+    }
+
+    [data-theme="light"] .theme-toggle:hover {
+      background: rgba(0,0,0,0.08);
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .writeup-divider {
+      background: var(--accent);
+    }
+
+    [data-theme="light"] .writeup-section {
+      background: #fff;
+      border-color: #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    [data-theme="light"] .writeup h2 {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .decision-card {
+      background: #f8fafc;
+    }
+
+    [data-theme="light"] .decision-card h3 {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .arch-card {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    [data-theme="light"] .arch-card h3 {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .arch-card code {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669;
+    }
+
+    [data-theme="light"] .step-icon {
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.15);
+    }
+
+    [data-theme="light"] .step-label {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .next-label {
+      color: var(--text-primary);
+    }
+
+    [data-theme="light"] .video-container {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.06);
+    }
+
+    [data-theme="light"] footer {
+      color: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .wrapper { padding: 28px 16px 16px; }
+      .panels { grid-template-columns: 1fr; }
+      header h1 { font-size: 22px; }
+      textarea { min-height: 260px; font-size: 11.5px; }
+      .result-header { flex-direction: column; align-items: flex-start; }
+      .result-meta { flex-direction: column; gap: 8px; }
+      .pipeline-diagram { flex-direction: column; align-items: center; }
+      .pipeline-arrow { padding-top: 0; transform: rotate(90deg); }
+      .decision-grid { grid-template-columns: 1fr; }
+      .arch-grid { grid-template-columns: 1fr; }
+      .writeup-section { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle theme">&#9789;</button>
+  <div class="wrapper">
+    <header>
+      <h1>Storyteller <span>Story QA</span></h1>
+      <p>Automatically reviews tenant stories for broken CTAs, missing content, and quality issues — so editors catch problems before users do.</p>
+      <nav class="page-nav">
+        <a href="#qa-tool">QA Tool</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#decisions">Decisions</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#next">What's Next</a>
+      </nav>
+    </header>
+
+    <div id="qa-tool" class="panels">
+      <div class="panel panel-input">
+        <h2>Story Payload</h2>
+        <p class="instruction">
+          Paste a story payload and hit Submit to run QA evaluation.
+          <br><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to submit.
+        </p>
+        <textarea id="payload-input" spellcheck="false"></textarea>
+        <div id="input-error" class="error-message"></div>
+        <button id="submit-btn" class="btn-submit">Submit for QA</button>
+      </div>
+
+      <div class="panel panel-results">
+        <h2>QA Results</h2>
+        <div id="results-container">
+          <div class="placeholder-text">
+            <span class="icon">&#9776;</span>
+            Results will appear here after submission.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Writeup divider -->
+    <div class="writeup-divider"></div>
+
+    <div class="writeup">
+
+      <!-- Section 1: The Problem -->
+      <section id="the-problem" class="writeup-section">
+        <h2><span>The Problem</span></h2>
+        <p class="writeup-intro">What Storyteller asked us to solve — and why it's bigger than story quality.</p>
+
+        <div class="decision-grid">
+          <div class="decision-card">
+            <h3>The brief</h3>
+            <p>Teams publish media-heavy content at high volume. As volume grows, it gets harder to ensure everything is consistent, professional, and trustworthy. Manual review doesn't scale.</p>
+          </div>
+          <div class="decision-card">
+            <h3>The real issue</h3>
+            <p>This isn't just a story quality problem. It's a <strong style="color:var(--accent);">tenant health monitoring</strong> problem. Storyteller needs visibility into what tenants are publishing — before trust damage shows up in engagement metrics.</p>
+          </div>
+          <div class="decision-card">
+            <h3>The failure mode</h3>
+            <p>A CTA says "Buy tickets" but links to <code>/highlights</code>. The user taps it, lands on the wrong page, bounces. The editor didn't catch it. Storyteller had no signal. Invisible trust damage.</p>
+          </div>
+          <div class="decision-card">
+            <h3>What we built</h3>
+            <p>An automated pipeline that catches these issues, logs them, and tracks patterns per tenant over time. Runs automatically from the data — not a one-off analysis.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: How It Works -->
+      <section id="how-it-works" class="writeup-section">
+        <h2><span>How It Works</span></h2>
+        <p class="writeup-intro">Six steps. Built entirely in n8n. Each step does one thing.</p>
+
+        <div class="pipeline-diagram">
+          <div class="pipeline-step">
+            <div class="step-icon">1</div>
+            <div class="step-label">Webhook</div>
+            <div class="step-desc">Receives tenant story payload via POST request</div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-step">
+            <div class="step-icon">2</div>
+            <div class="step-label">Split</div>
+            <div class="step-desc">Breaks the stories array into individual items</div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-step">
+            <div class="step-icon">3</div>
+            <div class="step-label">Validate</div>
+            <div class="step-desc">Structural checks — missing fields, empty titles, broken actions. No AI needed.</div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-step">
+            <div class="step-icon">4</div>
+            <div class="step-label">AI Eval</div>
+            <div class="step-desc">GPT-4 checks CTA coherence, title alignment, page completeness</div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-step">
+            <div class="step-icon">5</div>
+            <div class="step-label">Route</div>
+            <div class="step-desc">Sends each result down the right path based on status</div>
+          </div>
+          <div class="pipeline-arrow"></div>
+          <div class="pipeline-step">
+            <div class="step-icon">6</div>
+            <div class="step-label">Store + Alert</div>
+            <div class="step-desc">Writes to Neon DB. Emails alerts on flagged or broken stories.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: The n8n Pipeline -->
+      <section id="pipeline-detail" class="writeup-section">
+        <h2><span>The n8n Pipeline</span></h2>
+        <p class="writeup-intro">What each node does and why it exists.</p>
+
+        <ul class="next-list">
+          <li>
+            <span><span class="next-label">Webhook trigger</span> <span class="next-detail">— Receives the full tenant payload (tenant_id, tenant_name, stories array). No transformation at this stage.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Split stories</span> <span class="next-detail">— Each story flows through the pipeline independently. n8n handles concurrency natively.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Structural validation</span> <span class="next-detail">— Fast, free, deterministic. Checks for missing titles, empty pages, broken action objects. Catches invalid data before any AI call is made.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">AI evaluation</span> <span class="next-detail">— One API call per story. Checks CTA-to-URL coherence, title-to-category alignment, and page completeness. Returns structured JSON with specific issues.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Route by status</span> <span class="next-detail">— ok stories get logged quietly. review/invalid/error stories get logged and trigger an email alert with the story ID, tenant, and issues list.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Database trigger</span> <span class="next-detail">— A PostgreSQL trigger fires on every insert. It extracts each issue and upserts into a <code>tenant_health</code> table. Analytics are decoupled from the pipeline — n8n doesn't need to know the trigger exists.</span></span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Section 4: Design Decisions -->
+      <section id="decisions" class="writeup-section">
+        <h2><span>What We Decided Not To Build</span></h2>
+        <p class="writeup-intro">Every "no" is a deliberate choice. Here's what we left out and why.</p>
+
+        <div class="decision-grid">
+          <div class="decision-card">
+            <h3>No composite quality score</h3>
+            <p>A number like "72" is not actionable. "CTA mismatch on page_2" is. Specific, named issues tell an editor exactly what to fix.</p>
+          </div>
+          <div class="decision-card">
+            <h3>No video or image analysis</h3>
+            <p>The structured metadata already carries the coherence signal. Video analysis adds latency and cost at the wrong layer for this use case.</p>
+          </div>
+          <div class="decision-card">
+            <h3>No automated moderation</h3>
+            <p>QA surfaces signals. It does not replace editors. Automating moderation decisions creates liability and erodes editorial trust.</p>
+          </div>
+          <div class="decision-card">
+            <h3>No multi-agent AI chain</h3>
+            <p>Four AI reviewers producing conflicting outputs that get averaged together degrades signal quality. One precise, well-prompted call is more reliable.</p>
+          </div>
+          <div class="decision-card">
+            <h3>Structural validation before AI</h3>
+            <p>If a story has no pages or a missing title, there's nothing for the AI to evaluate. Catching this first is free, fast, and saves API spend on broken data.</p>
+          </div>
+          <div class="decision-card">
+            <h3>Tenant health via database trigger</h3>
+            <p>The analytics layer runs independently of the pipeline. A PostgreSQL trigger counts issues per tenant automatically. No extra n8n nodes needed.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Architecture -->
+      <section id="architecture" class="writeup-section">
+        <h2><span>Architecture</span></h2>
+        <p class="writeup-intro">Two tables, one trigger. The pipeline writes results. The database handles analytics.</p>
+
+        <div class="arch-grid">
+          <div class="arch-card">
+            <h3>story_qa_results</h3>
+            <p>Every evaluated story gets a row. Stores <code>story_id</code>, <code>tenant_id</code>, <code>status</code>, <code>confidence</code>, <code>issues</code> (as JSONB), <code>summary</code>, and <code>error_message</code>. All outcomes — clean passes, flagged issues, and pipeline errors — live in one table.</p>
+          </div>
+          <div class="arch-card">
+            <h3>tenant_health</h3>
+            <p>Auto-populated by a database trigger. Tracks <code>issue_type</code> and <code>occurrence_count</code> per tenant. Over time, this answers: which tenants have recurring CTA problems? Which issues are systemic vs. one-off? Which tenants are getting worse?</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 6: What's Next -->
+      <section id="next" class="writeup-section">
+        <h2><span>What We'd Build Next</span></h2>
+        <p class="writeup-intro">With engineering support, these are the logical next steps.</p>
+
+        <ul class="next-list">
+          <li>
+            <span><span class="next-label">Raw payload inbox</span> <span class="next-detail">— Store the raw event before processing. If the pipeline breaks, nothing is lost. First production hardening step.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Tenant health dashboard</span> <span class="next-detail">— The data is already in the <code>tenant_health</code> table. It needs a UI for the customer success team.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">Pre-publish guardrails</span> <span class="next-detail">— Same pipeline logic, but runs inside the CMS before a story goes live. Editors see issues before publish, not after.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">CMS feedback loop</span> <span class="next-detail">— Surface QA results directly to the editor who published the story. Closes the loop between ops monitoring and content creation.</span></span>
+          </li>
+          <li>
+            <span><span class="next-label">URL validation</span> <span class="next-detail">— HTTP HEAD check on each action URL. Catches broken links that AI can't detect from metadata alone.</span></span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Section 7: Demo Video -->
+      <section id="demo" class="writeup-section">
+        <h2><span>Demo</span></h2>
+        <div class="video-container">
+          <video controls playsinline preload="metadata" poster="">
+            <source src="../videos/storyteller-qa-demo.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        <p style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+          Watch the pipeline process two stories: one clean pass, one with a CTA mismatch flagged for review.
+        </p>
+
+        <h3 style="margin-top: 36px; font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--text-on-dark);">Neon Database — Live Results</h3>
+        <p style="margin-top: 6px; margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
+          Every evaluation is persisted to PostgreSQL. These are real rows written by the pipeline.
+        </p>
+
+        <!-- story_qa_results table -->
+        <div style="margin-bottom: 24px;">
+          <p style="font-family: var(--font-mono); font-size: 12px; color: var(--accent); margin-bottom: 8px;">story_qa_results</p>
+          <div style="overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-mono);">
+              <thead>
+                <tr style="background: rgba(255,255,255,0.04);">
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">story_id</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">tenant_name</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">status</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">confidence</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">issues</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">summary</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">story_123</td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Antarctic Football League</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--amber); font-weight: 600;">review</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">high</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">page_2: cta_mismatch — "Buy tickets" → /highlights</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">CTA mismatch on page 2 needs correction.</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">story_124</td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Antarctic Football League</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--green); font-weight: 600;">ok</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">high</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">—</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">Coherent, complete, aligned with title and categories.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- tenant_health table -->
+        <div>
+          <p style="font-family: var(--font-mono); font-size: 12px; color: var(--accent); margin-bottom: 8px;">tenant_health</p>
+          <div style="overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.08);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--font-mono);">
+              <thead>
+                <tr style="background: rgba(255,255,255,0.04);">
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">tenant_name</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">issue_type</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">occurrence_count</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">first_seen_at</th>
+                  <th style="padding: 10px 14px; text-align: left; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08);">last_seen_at</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Antarctic Football League</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--amber); font-weight: 600;">cta_mismatch</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">6</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 06:25</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 08:45</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Test Tenant - Invalid Structure</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--red); font-weight: 600;">missing_title</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">1</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Test Tenant - Invalid Structure</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--red); font-weight: 600;">no_pages</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">1</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">Test Tenant - Invalid Structure</td>
+                  <td style="padding: 10px 14px;"><span style="color: var(--red); font-weight: 600;">missing_cta</span></td>
+                  <td style="padding: 10px 14px; color: var(--text-on-dark);">1</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                  <td style="padding: 10px 14px; color: var(--text-secondary); font-size: 12px;">2026-03-13 07:34</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="margin-top: 10px; font-size: 12px; color: var(--text-muted); font-style: italic;">
+            Populated automatically by a PostgreSQL trigger — the pipeline doesn't write to this table directly.
+          </p>
+        </div>
+
+        <!-- Error / Invalid Flow -->
+        <h3 style="margin-top: 36px; font-family: var(--font-display); font-size: 18px; font-weight: 600; color: var(--text-on-dark);">Error Flow — What Happens When Structure Fails</h3>
+        <p style="margin-top: 6px; margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">
+          Before the AI ever sees a story, structural validation catches broken data. No API spend on garbage in.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+          <!-- Invalid structure example -->
+          <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.2); border-left: 4px solid var(--red); border-radius: var(--radius-sm); padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+              <span style="font-family: var(--font-mono); font-size: 13px; color: var(--text-on-dark); font-weight: 600;">story_broken_001</span>
+              <span style="background: var(--red); color: #fff; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">invalid_structure</span>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.8;">
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--red);">&#10005;</span>
+                <span><strong style="color: var(--text-on-dark);">missing_title</strong> — story_title is empty or absent</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--red);">&#10005;</span>
+                <span><strong style="color: var(--text-on-dark);">no_pages</strong> — pages array is empty</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--red);">&#10005;</span>
+                <span><strong style="color: var(--text-on-dark);">missing_cta</strong> — page has no action/CTA defined</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- What happens next -->
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 20px;">
+            <p style="font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text-on-dark); margin-bottom: 12px;">What happens next</p>
+            <div style="font-size: 13px; color: var(--text-secondary); line-height: 2;">
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--accent);">1.</span>
+                <span>Story is <strong style="color: var(--text-on-dark);">rejected before AI evaluation</strong> — no API call made</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--accent);">2.</span>
+                <span>Result written to <strong style="color: var(--text-on-dark);">Neon</strong> with status <code style="color: var(--red); background: rgba(239,68,68,0.1); padding: 1px 5px; border-radius: 3px; font-size: 12px;">invalid_structure</code></span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--accent);">3.</span>
+                <span><strong style="color: var(--text-on-dark);">Email alert</strong> sent with story_id, tenant, and what failed</span>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: baseline;">
+                <span style="color: var(--accent);">4.</span>
+                <span><strong style="color: var(--text-on-dark);">tenant_health</strong> trigger logs each issue type</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size: 12px; color: var(--text-muted); font-style: italic;">
+          Structural validation is deterministic, free, and fast. It runs before AI so broken payloads never waste an API call.
+        </p>
+      </section>
+
+    </div>
+
+    <footer>
+      <div style="margin-bottom: 8px; font-size: 12px; color: var(--text-muted); letter-spacing: 0.3px;">
+        77 minutes <span>&middot;</span> 7 stages <span>&middot;</span> Schema to working pipeline
+      </div>
+      Built by Vaughn Botha <span>&mdash;</span> March 2026
+    </footer>
+  </div>
+
+  <script>
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
+    const BASE_URL = 'https://n8n.coliseumai.tech';
+    const POLL_INTERVAL = 2000;
+    const POLL_TIMEOUT = 60000;
+
+    // ============================================================
+    // SAMPLE PAYLOAD
+    // ============================================================
+    const SAMPLE_PAYLOAD = {
+      "tenant_id": "tenant_antarctic_league_001",
+      "tenant_name": "Antarctic Football League",
+      "last_synced_at": "2026-02-14T10:05:00Z",
+      "stories": [
+        {
+          "story_id": "story_123",
+          "story_title": "Last 5 meetings: Penguin FC vs Seals United",
+          "pages": [
+            {
+              "page_id": "page_1",
+              "type": "video",
+              "asset_url": "https://cdn.storyteller.com/assets/story_123/page_1.mp4",
+              "action": {
+                "cta": "Watch highlights",
+                "url": "https://antarcticfootballleague.com/match-report"
+              }
+            },
+            {
+              "page_id": "page_2",
+              "type": "image",
+              "asset_url": "https://cdn.storyteller.com/assets/story_123/page_2.jpg",
+              "action": {
+                "cta": "Buy tickets",
+                "url": "https://antarcticfootballleague.com/highlights"
+              }
+            }
+          ],
+          "context": {
+            "categories": ["Penguin FC", "Seals United", "PFC v SU \u2013 14/02/26"],
+            "tenant": "Antarctic Football League",
+            "publish_date": "2026-02-14"
+          }
+        },
+        {
+          "story_id": "story_124",
+          "story_title": "Matchday build-up: PFC v SU",
+          "pages": [
+            {
+              "page_id": "page_1",
+              "type": "image",
+              "asset_url": "https://cdn.storyteller.com/assets/story_124/page_1.jpg",
+              "action": {
+                "cta": "View lineup",
+                "url": "https://antarcticfootballleague.com/lineup"
+              }
+            },
+            {
+              "page_id": "page_2",
+              "type": "video",
+              "asset_url": "https://cdn.storyteller.com/assets/story_124/page_2.mp4",
+              "action": {
+                "cta": "Live match centre",
+                "url": "https://antarcticfootballleague.com/live"
+              }
+            }
+          ],
+          "context": {
+            "categories": ["Penguin FC", "Seals United", "PFC v SU \u2013 14/02/26", "Matchday"],
+            "tenant": "Antarctic Football League",
+            "publish_date": "2026-02-14"
+          }
+        }
+      ]
+    };
+
+    // ============================================================
+    // DOM REFERENCES
+    // ============================================================
+    const textarea = document.getElementById('payload-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const inputError = document.getElementById('input-error');
+    const resultsContainer = document.getElementById('results-container');
+
+    // Pre-fill textarea with sample data
+    textarea.value = JSON.stringify(SAMPLE_PAYLOAD, null, 2);
+
+    // Track active polling intervals
+    let activePolls = [];
+    let isEvaluating = false;
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    submitBtn.addEventListener('click', handleSubmit);
+
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    });
+
+    // ============================================================
+    // SUBMIT HANDLER
+    // ============================================================
+    async function handleSubmit() {
+      if (isEvaluating) return;
+
+      // Clear previous state
+      inputError.textContent = '';
+      resultsContainer.innerHTML = '';
+
+      // Parse JSON
+      let payload;
+      try {
+        payload = JSON.parse(textarea.value);
+      } catch (err) {
+        inputError.textContent = 'Invalid JSON. Please check your payload and try again.';
+        return;
+      }
+
+      // Validate stories array
+      if (!payload.stories || !Array.isArray(payload.stories) || payload.stories.length === 0) {
+        inputError.textContent = 'Payload must contain a non-empty "stories" array.';
+        return;
+      }
+
+      const storyIds = payload.stories.map(s => s.story_id).filter(Boolean);
+      if (storyIds.length === 0) {
+        inputError.textContent = 'No valid story_id found in the stories array.';
+        return;
+      }
+
+      // Set evaluating state
+      setEvaluating(true);
+
+      // Create loading cards for each story
+      storyIds.forEach((id, index) => {
+        const card = createLoadingCard(id);
+        card.style.animationDelay = `${index * 0.1}s`;
+        resultsContainer.appendChild(card);
+      });
+
+      // POST payload to pipeline
+      try {
+        const response = await fetch(`${BASE_URL}/webhook/story-qa`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Pipeline returned ${response.status}`);
+        }
+      } catch (err) {
+        resultsContainer.innerHTML = '';
+        resultsContainer.appendChild(createErrorCard(
+          'Could not reach the QA pipeline.',
+          `${err.message}. Check that n8n is running and the webhook is active.`
+        ));
+        setEvaluating(false);
+        return;
+      }
+
+      // Start polling for each story
+      let completedCount = 0;
+      const totalStories = storyIds.length;
+
+      storyIds.forEach(storyId => {
+        const startTime = Date.now();
+
+        const intervalId = setInterval(async () => {
+          // Check timeout
+          if (Date.now() - startTime > POLL_TIMEOUT) {
+            clearInterval(intervalId);
+            renderTimeoutCard(storyId);
+            completedCount++;
+            if (completedCount >= totalStories) setEvaluating(false);
+            return;
+          }
+
+          try {
+            const res = await fetch(
+              `${BASE_URL}/webhook/story-qa-result?story_id=${encodeURIComponent(storyId)}`
+            );
+
+            if (!res.ok) return; // Retry on next tick
+
+            const data = await res.json();
+
+            // n8n responds with an array; check for results
+            const results = Array.isArray(data) ? data : [data];
+            if (results.length > 0 && results[0].story_id) {
+              clearInterval(intervalId);
+              renderResultCard(storyId, results[0]);
+              completedCount++;
+              if (completedCount >= totalStories) setEvaluating(false);
+            }
+          } catch {
+            // Network error — just retry on next tick
+          }
+        }, POLL_INTERVAL);
+
+        activePolls.push(intervalId);
+      });
+    }
+
+    // ============================================================
+    // UI STATE
+    // ============================================================
+    function setEvaluating(state) {
+      isEvaluating = state;
+      submitBtn.disabled = state;
+
+      if (state) {
+        submitBtn.innerHTML = '<div class="spinner-inline"></div> Evaluating\u2026';
+      } else {
+        submitBtn.textContent = 'Submit for QA';
+        // Clear all polls
+        activePolls.forEach(id => clearInterval(id));
+        activePolls = [];
+      }
+    }
+
+    // ============================================================
+    // CARD BUILDERS
+    // ============================================================
+    function createLoadingCard(storyId) {
+      const card = document.createElement('div');
+      card.className = 'result-card status-loading';
+      card.id = `result-${storyId}`;
+      card.innerHTML = `
+        <div class="result-header">
+          <span class="result-story-id">${escapeHtml(storyId)}</span>
+          <span class="badge badge-loading">Pending</span>
+        </div>
+        <div class="loading-content">
+          <div class="spinner"></div>
+          Evaluating ${escapeHtml(storyId)}\u2026
+        </div>
+      `;
+      return card;
+    }
+
+    function renderResultCard(storyId, result) {
+      const card = document.getElementById(`result-${storyId}`);
+      if (!card) return;
+
+      const status = result.status || 'error';
+      const statusLabel = status.replace(/_/g, ' ');
+      const badgeClass = `badge-${status}`;
+      const issues = result.issues || [];
+      const hasIssues = issues.length > 0;
+
+      card.className = `result-card status-${status}`;
+      card.style.animation = 'none';
+      card.offsetHeight; // Trigger reflow
+      card.style.animation = 'fadeInUp 0.4s ease';
+
+      card.innerHTML = `
+        <div class="result-header">
+          <span class="result-story-id">${escapeHtml(result.story_id || storyId)}</span>
+          <span class="badge ${badgeClass}">${escapeHtml(statusLabel)}</span>
+        </div>
+
+        <div class="result-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tenant:</span>
+            ${escapeHtml(result.tenant_name || 'Unknown')}
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Confidence:</span>
+            ${escapeHtml(result.confidence || 'N/A')}
+          </div>
+        </div>
+
+        <div class="issues-section">
+          <div class="issues-title">Issues (${issues.length})</div>
+          ${hasIssues
+            ? issues.map(issue => `
+              <div class="issue-row">
+                <span class="issue-type-tag ${isErrorType(issue.type) ? 'type-error' : ''}">${escapeHtml(formatIssueType(issue.type))}</span>
+                <span class="issue-page">${escapeHtml(issue.page || '')}</span>
+                <span class="issue-detail">${escapeHtml(issue.detail || '')}</span>
+              </div>
+            `).join('')
+            : '<div class="no-issues">No issues detected</div>'
+          }
+        </div>
+
+        ${result.summary ? `<div class="result-summary">${escapeHtml(result.summary)}</div>` : ''}
+
+        ${result.error_message ? `<div class="result-summary" style="color:var(--red);font-style:normal;">Error: ${escapeHtml(result.error_message)}</div>` : ''}
+
+        <div class="result-timestamp">Evaluated: ${formatTimestamp(result.evaluated_at)}</div>
+      `;
+    }
+
+    function renderTimeoutCard(storyId) {
+      const card = document.getElementById(`result-${storyId}`);
+      if (!card) return;
+
+      card.className = 'result-card status-error';
+      card.innerHTML = `
+        <div class="result-header">
+          <span class="result-story-id">${escapeHtml(storyId)}</span>
+          <span class="badge badge-error">Timeout</span>
+        </div>
+        <div class="result-summary" style="font-style:normal;color:var(--text-secondary);">
+          Timed out waiting for results after ${POLL_TIMEOUT / 1000} seconds. The pipeline may still be processing &mdash; try refreshing or re-submitting.
+        </div>
+      `;
+    }
+
+    function createErrorCard(title, detail) {
+      const card = document.createElement('div');
+      card.className = 'error-card';
+      card.innerHTML = `<strong>${escapeHtml(title)}</strong>${escapeHtml(detail)}`;
+      return card;
+    }
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    function formatTimestamp(isoString) {
+      if (!isoString) return 'N/A';
+      try {
+        const d = new Date(isoString);
+        return d.toLocaleString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+      } catch {
+        return isoString;
+      }
+    }
+
+    function formatIssueType(type) {
+      if (!type) return 'Unknown';
+      return type.replace(/_/g, ' ');
+    }
+
+    function isErrorType(type) {
+      if (!type) return false;
+      const errorTypes = ['missing_field', 'empty_title', 'no_pages', 'missing_action', 'invalid'];
+      return errorTypes.some(t => type.toLowerCase().includes(t));
+    }
+
+    // ============================================================
+    // THEME TOGGLE
+    // ============================================================
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('storyteller-theme');
+
+    if (savedTheme === 'dark') {
+      document.documentElement.removeAttribute('data-theme');
+      themeToggle.innerHTML = '&#9789;';
+    } else {
+      themeToggle.innerHTML = '&#9728;';
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      if (isLight) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('storyteller-theme', 'dark');
+        themeToggle.innerHTML = '&#9789;';
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('storyteller-theme', 'light');
+        themeToggle.innerHTML = '&#9728;';
+      }
+    });
+  </script>
+</body>
+</html>

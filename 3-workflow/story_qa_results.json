@@ -1,0 +1,86 @@
+{
+  "name": "Story QA Results",
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 300],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "story-qa-result",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "query_neon",
+      "name": "Query Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [300, 300],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, story_id, tenant_id, tenant_name, status, confidence, issues, summary, error_message, evaluated_at FROM story_qa_results WHERE story_id = $1 ORDER BY evaluated_at DESC LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $json.query.story_id }}"
+        }
+      },
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "YOUR_POSTGRES_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [600, 300],
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      }
+    },
+    {
+      "id": "sticky_overview",
+      "name": "Results Endpoint",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-200, 0],
+      "parameters": {
+        "content": "## Story QA Results — Read Endpoint\n\n**What we did:** Simple GET endpoint that returns QA results by story_id. The HTML frontend polls this every 2 seconds after submitting a payload, until results appear.\n\n**Endpoint:** GET /story-qa-result?story_id=story_123\n\n**Why this way:** Separate workflow keeps read/write concerns isolated from the main pipeline. Polling is more reliable than fixed delays — AI evaluation time varies per story.\n\n**What we did NOT build:** No authentication, no pagination, no bulk query by tenant_id. This is a demo endpoint — production would need auth headers and rate limiting.\n\n**What we would build next:** Auth headers, rate limiting, query by tenant_id for dashboard use, WebSocket for real-time push instead of polling."
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Query Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Neon": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

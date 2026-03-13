@@ -1,0 +1,512 @@
+{
+  "name": "Story QA Pipeline",
+  "description": null,
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "story-qa",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        448
+      ],
+      "webhookId": ""
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the stories array into individual items\n// and enrich each story with tenant-level metadata\nconst body = $input.first().json.body;\nconst stories = body.stories || [];\n\nif (stories.length === 0) {\n  throw new Error('No stories found in payload');\n}\n\nreturn stories.map(story => ({\n  json: {\n    ...story,\n    tenant_id: body.tenant_id,\n    tenant_name: body.tenant_name,\n    last_synced_at: body.last_synced_at\n  }\n}));"
+      },
+      "id": "split_stories",
+      "name": "Split Stories",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Structural validation \u2014 no AI, fast, deterministic, free\n// Catches broken data before it hits the API\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const story = item.json;\n  const issues = [];\n\n  // Check story_title exists and is not empty\n  if (!story.story_title || String(story.story_title).trim() === '') {\n    issues.push({ type: 'missing_title', page: null, detail: 'Story title is missing or empty' });\n  }\n\n  // Check pages array has at least one item\n  if (!story.pages || !Array.isArray(story.pages) || story.pages.length === 0) {\n    issues.push({ type: 'no_pages', page: null, detail: 'Story has no pages' });\n  } else {\n    for (const page of story.pages) {\n      // Each page must have an asset_url\n      if (!page.asset_url || String(page.asset_url).trim() === '') {\n        issues.push({ type: 'missing_asset', page: page.page_id, detail: 'Page ' + page.page_id + ' is missing asset_url' });\n      }\n      // Each action must have both cta and url\n      if (page.action) {\n        if (!page.action.cta || String(page.action.cta).trim() === '') {\n          issues.push({ type: 'missing_cta', page: page.page_id, detail: 'Page ' + page.page_id + ' action is missing CTA text' });\n        }\n        if (!page.action.url || String(page.action.url).trim() === '') {\n          issues.push({ type: 'missing_action_url', page: page.page_id, detail: 'Page ' + page.page_id + ' action is missing URL' });\n        }\n      }\n    }\n  }\n\n  results.push({\n    json: {\n      ...story,\n      structure_valid: issues.length === 0,\n      structure_issues: issues\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "validate_structure",
+      "name": "Validate Structure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "structure_valid_check",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.structure_valid }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "structure_check",
+      "name": "Structure OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare prompt strings for the Basic LLM Chain + OpenRouter Chat Model\n// No more raw HTTP request body \u2014 we use the native n8n OpenRouter node\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const story = item.json;\n  const storyData = {\n    story_id: story.story_id,\n    story_title: story.story_title,\n    pages: story.pages,\n    context: story.context\n  };\n\n  results.push({\n    json: {\n      story_id: story.story_id,\n      tenant_id: story.tenant_id,\n      tenant_name: story.tenant_name,\n      chatInput: 'Story data:\\n' + JSON.stringify(storyData, null, 2)\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "prep_ai",
+      "name": "Prepare AI Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a Story QA reviewer for a media publishing platform.\n\nA Story contains pages. Each page has a media asset and an action with a CTA label and a destination URL.\n\nEvaluate this story and return a JSON object only \u2014 no prose, no markdown, no code fences.\n\nCheck:\n1. CTA coherence: does the CTA text make sense given the URL path?\n   (\"Buy tickets\" pointing to /highlights is a mismatch.)\n   (\"Watch highlights\" pointing to /match-report is coherent.)\n2. Title alignment: does the story title match the categories?\n3. Page completeness: are any required fields missing or empty?\n\nReturn exactly this JSON structure:\n{\n  \"story_id\": \"\",\n  \"issues\": [\n    {\n      \"type\": \"cta_mismatch\",\n      \"page\": \"page_2\",\n      \"detail\": \"one sentence explanation\"\n    }\n  ],\n  \"status\": \"ok or review or invalid\",\n  \"confidence\": \"high or medium or low\",\n  \"summary\": \"one sentence\"\n}\n\nStatus guide:\n- ok: no issues found\n- review: issues found that need editor attention\n- invalid: critical problems that make the story unusable"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "ai_eval_chain",
+      "name": "AI Evaluation",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1504,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4",
+        "options": {
+          "maxTokens": 1000,
+          "responseFormat": "json_object",
+          "temperature": 0.2
+        }
+      },
+      "id": "openrouter_model",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        512
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "",
+          "name": "YOUR_OPENROUTER_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response from the Basic LLM Chain output\n// With json_object response format, the chain outputs parsed JSON directly into $json\nconst items = $input.all();\nconst origItems = $('Prepare AI Request').all();\nconst results = [];\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i].json;\n  const orig = origItems[i].json;\n\n  try {\n    let result;\n\n    if (item.status && (item.status === 'ok' || item.status === 'review' || item.status === 'invalid')) {\n      // Already parsed JSON from LLM Chain json_object mode\n      result = item;\n    } else if (item.text || item.output) {\n      // Fallback: text output that needs parsing\n      const aiContent = item.text || item.output || '';\n      const jsonMatch = aiContent.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        result = JSON.parse(jsonMatch[0]);\n      } else {\n        throw new Error('No JSON found in AI response');\n      }\n    } else {\n      throw new Error('Unexpected AI response format: ' + JSON.stringify(Object.keys(item)));\n    }\n\n    if (!result.status || !['ok', 'review', 'invalid'].includes(result.status)) {\n      result.status = 'review';\n    }\n\n    results.push({\n      json: {\n        story_id: result.story_id || orig.story_id,\n        tenant_id: orig.tenant_id,\n        tenant_name: orig.tenant_name,\n        status: result.status,\n        confidence: result.confidence || 'low',\n        issues: result.issues || [],\n        summary: result.summary || 'AI evaluation completed',\n        error_message: null\n      }\n    });\n  } catch (error) {\n    results.push({\n      json: {\n        story_id: orig.story_id,\n        tenant_id: orig.tenant_id,\n        tenant_name: orig.tenant_name,\n        status: 'error',\n        confidence: null,\n        issues: [],\n        summary: null,\n        error_message: 'AI evaluation failed: ' + error.message\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "parse_ai",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format structurally invalid stories into the standard result shape\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const story = item.json;\n  results.push({\n    json: {\n      story_id: story.story_id,\n      tenant_id: story.tenant_id,\n      tenant_name: story.tenant_name,\n      status: 'invalid_structure',\n      confidence: 'high',\n      issues: story.structure_issues,\n      summary: 'Structural validation failed: ' + story.structure_issues.length + ' issue(s) found',\n      error_message: null\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "prep_invalid",
+      "name": "Prepare Invalid Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build parameterised INSERT query for Neon\n// Both valid and invalid paths converge here with the same shape\n// IMPORTANT: We keep all result fields on the output so downstream nodes\n// can reference $json directly without paired-item issues\nconst items = $input.all();\nconst results = [];\n\nfunction esc(val) {\n  if (val === null || val === undefined) return 'NULL';\n  return \"'\" + String(val).replace(/'/g, \"''\") + \"'\";\n}\n\nfor (const item of items) {\n  const r = item.json;\n  const issuesJson = r.issues && r.issues.length > 0\n    ? esc(JSON.stringify(r.issues)) + '::jsonb'\n    : 'NULL';\n\n  const query = 'INSERT INTO story_qa_results (story_id, tenant_id, tenant_name, status, confidence, issues, summary, error_message) VALUES ('\n    + esc(r.story_id) + ', '\n    + esc(r.tenant_id) + ', '\n    + esc(r.tenant_name) + ', '\n    + esc(r.status) + ', '\n    + esc(r.confidence) + ', '\n    + issuesJson + ', '\n    + esc(r.summary) + ', '\n    + esc(r.error_message) + ')';\n\n  results.push({\n    json: { ...r, query }\n  });\n}\n\nreturn results;"
+      },
+      "id": "build_query",
+      "name": "Build DB Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}",
+        "options": {}
+      },
+      "id": "write_neon",
+      "name": "Write to Neon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2352,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "",
+          "name": "YOUR_POSTGRES_CREDENTIAL"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "status_not_ok",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              },
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ok"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "alert_check",
+      "name": "Needs Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2736,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "=[Story QA] {{ $json.status === 'invalid_structure' ? 'Story failed validation' : $json.status === 'review' ? 'Story flagged for review' : 'Pipeline error' }} \u2014 {{ $json.story_id }}",
+        "message": "=<h2>Story QA Alert</h2><table style=\"border-collapse:collapse;width:100%;max-width:600px\"><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Story ID</td><td style=\"padding:8px;border:1px solid #ddd\">{{ $json.story_id }}</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Tenant</td><td style=\"padding:8px;border:1px solid #ddd\">{{ $json.tenant_name }} ({{ $json.tenant_id }})</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Status</td><td style=\"padding:8px;border:1px solid #ddd;color:{{ $json.status === 'review' ? '#b45309' : '#dc2626' }}\"><strong>{{ $json.status.toUpperCase() }}</strong></td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Summary</td><td style=\"padding:8px;border:1px solid #ddd\">{{ $json.summary || 'N/A' }}</td></tr></table><h3>Issues</h3><ul>{{ $json.issues.map(i => '<li><strong>' + i.type + '</strong>' + (i.page ? ' (Page: ' + i.page + ')' : '') + ' \u2014 ' + i.detail + '</li>').join('') }}</ul><p style=\"color:#666;font-size:12px\">Sent by Story QA Pipeline</p>",
+        "options": {}
+      },
+      "id": "send_alert",
+      "name": "Send Alert Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3008,
+        432
+      ],
+      "webhookId": "",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "YOUR_GMAIL_CREDENTIAL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Story QA Pipeline \u2014 Storyteller\n\n**What it does:** Receives tenant story payloads via webhook, validates structure (no AI), evaluates coherence with GPT-4 via OpenRouter, writes results to Neon (PostgreSQL), and sends Gmail alerts for flagged stories.\n\n**Flow:**\nWebhook \u2192 Split Stories \u2192 Validate \u2192 AI Eval \u2192 Route \u2192 Write to Neon + Alert\n\n**What we did NOT build:**\n- No video/image analysis \u2014 structured metadata carries the signal\n- No composite quality score \u2014 specific named issues are more actionable\n- No multi-agent chain \u2014 one precise evaluation beats four noisy ones\n\n**What we would build next:**\n- Raw payload inbox table (resilience)\n- Tenant health dashboard (UI for customer success)\n- Pre-publish guardrail mode (same logic, runs before publish)",
+        "height": 420,
+        "width": 520
+      },
+      "id": "sticky_overview",
+      "name": "Pipeline Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 1. Ingestion\n\n**What we did:** Webhook receives POST payload. Code node splits the stories array and enriches each story with tenant_id and tenant_name.\n\n**Why:** Each story flows through the pipeline independently. n8n handles concurrency natively.\n\n**Not built:** Raw payload inbox \u2014 in production, write the raw event before processing. Omitted for time.",
+        "height": 240,
+        "width": 560,
+        "color": 4
+      },
+      "id": "sticky_ingest",
+      "name": "Ingestion Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Validation Gate\n\n**What we did:** Code node checks for missing titles, empty pages, missing asset URLs, incomplete actions. No AI needed \u2014 fast, deterministic, free.\n\n**Why:** Eliminates API spend on broken data. A story missing a title doesn't need GPT-4 to tell us it's broken.\n\n**Not built:** URL validation (HTTP HEAD on action URLs). Would catch dead links but adds latency.",
+        "height": 260,
+        "width": 400,
+        "color": 4
+      },
+      "id": "sticky_validate",
+      "name": "Validation Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        608,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3. AI Evaluation (OpenRouter Chat Model \u2192 GPT-4)\n\n**What we did:** Uses n8n's native OpenRouter Chat Model node with a Basic LLM Chain. One call per valid story. System prompt checks CTA coherence, title alignment, and page completeness. Returns structured JSON (json_object response format).\n\n**Why:** Native node is cleaner than raw HTTP \u2014 handles auth, retries, and model selection natively. One precise, well-prompted call is more reliable than multiple conflicting reviewers.\n\n**Not built:** Multi-agent chain. Also no automated moderation \u2014 QA surfaces signals, does not replace editors.\n\n**Credentials:** Uses an OpenRouter API credential. Model: openai/gpt-4.",
+        "height": 300,
+        "width": 720,
+        "color": 4
+      },
+      "id": "sticky_ai",
+      "name": "AI Evaluation Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 4. Storage & Alerts\n\n**What we did:** Every result writes to Neon (story_qa_results). A DB trigger auto-populates tenant_health for pattern tracking. Flagged stories trigger Gmail alerts with story_id, tenant, issues.\n\n**Why:** Analytics (tenant_health trigger) is decoupled from pipeline. n8n doesn't know the trigger exists.\n\n**Alert channels:** Gmail for this prototype. In production, add Slack or Teams.\n\n**Credentials needed:** Postgres connection to Neon + Gmail OAuth2.",
+        "height": 280,
+        "width": 1020,
+        "color": 4
+      },
+      "id": "sticky_storage",
+      "name": "Storage & Alerts Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const origItems = $('Build DB Query').all();\nreturn origItems.map(item => ({\n  json: {\n    story_id: item.json.story_id,\n    tenant_id: item.json.tenant_id,\n    tenant_name: item.json.tenant_name,\n    status: item.json.status,\n    confidence: item.json.confidence,\n    issues: item.json.issues,\n    summary: item.json.summary,\n    error_message: item.json.error_message\n  }\n}));"
+      },
+      "id": "restore_data",
+      "name": "Restore Result Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2544,
+        448
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Stories",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Stories": {
+      "main": [
+        [
+          {
+            "node": "Validate Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Structure": {
+      "main": [
+        [
+          {
+            "node": "Structure OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure OK?": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Invalid Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Request": {
+      "main": [
+        [
+          {
+            "node": "AI Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Evaluation",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Build DB Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Invalid Result": {
+      "main": [
+        [
+          {
+            "node": "Build DB Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build DB Query": {
+      "main": [
+        [
+          {
+            "node": "Write to Neon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Alert?": {
+      "main": [
+        [
+          {
+            "node": "Send Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Write to Neon": {
+      "main": [
+        [
+          {
+            "node": "Restore Result Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Result Data": {
+      "main": [
+        [
+          {
+            "node": "Needs Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
