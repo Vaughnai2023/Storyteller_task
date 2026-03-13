@@ -55,8 +55,8 @@ With engineering support, in this order:
 **1. Database** — Run `2-database/schema.sql` against a Neon PostgreSQL instance.
 
 **2. Workflows** — Import into n8n:
-- `3-workflow/story_qa_pipeline.json` (main QA pipeline)
-- `3-workflow/story_qa_results.json` (results retrieval endpoint)
+- `3-n8n-flows/story_qa_pipeline.json` (main QA pipeline)
+- `3-n8n-flows/story_qa_results.json` (results retrieval endpoint)
 
 **3. Frontend** — Open `4-frontend/index.html` in your browser. Sample data is pre-loaded — hit Submit to run the pipeline.
 
@@ -67,7 +67,7 @@ The frontend includes the full writeup with pipeline details, architecture diagr
 ```
 1-sample-data/   → Example payload (Antarctic Football League — includes intentional CTA mismatch)
 2-database/      → SQL schema with tables + tenant health trigger
-3-workflow/       → n8n workflow exports (main pipeline + results endpoint)
+3-n8n-flows/     → n8n workflow exports (main pipeline + results endpoint)
 4-frontend/      → Single-file HTML interface with embedded writeup
 ```
 
